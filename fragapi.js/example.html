@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>fragapi example</title>
+		<meta charset="utf-8">
+	</head>
+	<body>
+		
+	<canvas id="canvas" style="border: none;" width="600" height="600"></canvas>
+
+	<script id="shader.frag" type="x-shader/x-fragment">
+		precision highp float;
+	
+		varying vec2 pos;        // camera dependent position, default is (-1,-1) to (1,1)
+		varying vec2 canvasPos;  // absolute position, independent of camera
+		uniform vec2 resolution; // frame buffer size, in pixels
+		uniform float time;      // time since start, in seconds
+
+		// Color parameters
+		const vec3 RGB = vec3(0.0,0.43,1.);
+		const float Divider = 23.;
+		const float Power = 1.2;
+		const float Radius = 0.7037;
+		const int iterations = 100;
+		
+		float rand(vec2 co){
+			// implementation found at: lumina.sourceforge.net/Tutorials/Noise.html
+			return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+		}
+
+		vec2 complexMul(vec2 a, vec2 b) {
+			return vec2( a.x*b.x -  a.y*b.y,a.x*b.y + a.y * b.x);
+		}
+		
+		vec3 color(vec2 c, bool Julia, vec2 JuliaC, float falloff) {
+			vec2 z = Julia ?  c : vec2(0.0,0.0);
+			vec2 add =  (Julia ? JuliaC : c);
+			int j = iterations;
+			for (int i = 0; i <= iterations; i++) {
+				if (dot(z,z)> 1000.0) { break; }
+				z = complexMul(z,z) + add;
+				j = i; 
+			}
+			
+			if (j < iterations) {
+				// The color scheme here is based on one
+				// from the Mandelbrot in Inigo Quilez's Shader Toy:
+				float co = float( j) + 1.0 - log2(.5*log2(dot(z,z)));
+				co = sqrt(max(0.,co)/256.0);
+				co += rand(pos)*0.02;
+				return falloff*vec3( .5+.5*cos(6.2831*co+RGB) );
+			}  else {
+				// Inside 
+				return vec3(0.05,0.01,0.02);
+			}
+		}
+			
+		vec3 mandel() {
+			float falloff = exp(-dot(canvasPos,canvasPos)/(1.0+0.2*rand(canvasPos)));
+			return color(pos, false, vec2(0.0),falloff);
+		}
+		
+		
+		void main() {
+			vec3 v =  mandel();
+			gl_FragColor = vec4(pow(v,vec3(1./2.2)),1.0);
+		}
+		
+	</script>
+
+	<script id="shader.vert" type="x-shader/x-vertex">
+		attribute vec3 position;
+		varying vec2 pos;
+		varying vec2 canvasPos;
+		uniform float zoom;
+		uniform vec2 center;
+		
+		void main() {
+			pos = position.xy * zoom + center;
+			canvasPos = position.xy;
+			gl_Position =  vec4(position, 1.0);
+		}
+	</script>
+		
+	<script src="source/fragapi.js"></script>
+	<script src="source/Camera2D.js"></script>
+	
+	<script>
+		var startTime = Date.now();
+		
+		var fb = FrameBuffer.create("shader.frag", "shader.vert");
+		var cam = Camera2D.create("canvas");
+		
+		fb.updateUniforms = function() {
+			if (cam.dirty || fb.dirty) {
+				fb.setUniform1f("time", (Date.now() - startTime) / 1000);
+				fb.setUniform1f("zoom", 1.0);
+				cam.setUniforms(fb);
+				console.log("Cam is " + cam.dirty);
+				fb.setDirty();
+				cam.dirty = false;
+			}
+		};
+		
+		fb.renderToCanvas("canvas");	
+	</script>
+	</body>
+</html>
