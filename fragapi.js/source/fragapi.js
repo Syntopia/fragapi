@@ -15,6 +15,9 @@ window.requestAnimFrame = (function() {
 		 };
 })();
 
+if (!window.console) window.console = {};
+if (!window.console.log) window.console.log = function () { };
+
 fragapi.getGlFromCanvas = function(canvasID) {
 	var canvas = document.getElementById(canvasID);
 	var gl;
@@ -34,19 +37,37 @@ fragapi.getGlFromCanvas = function(canvasID) {
 	return gl;
 }
 
-fragapi.getShader = function(gl, source, type) {
-	if (type == "x-shader/x-fragment") {
-		shader = gl.createShader(gl.FRAGMENT_SHADER);
-	} else if (type == "x-shader/x-vertex") {
-		shader = gl.createShader(gl.VERTEX_SHADER);
-	} else {
-		return null;
-	}
+fragapi.pendingOperations = [];
+fragapi.externalShaders = new Map();
+fragapi.pendingOperationsCounter = 0;
 
+fragapi.loadScript = function(src, id, callback) {
+	var head = document.getElementsByTagName('head')[0];
+	var script = document.createElement('script');
+	script.type = 'text/javascript';
+	script.onload = callback;
+	script.src = src;
+	head.appendChild(script);
+	fragapi.pendingOperations.push(src);	
+}
+
+fragapi.injectShader = function() {
+	if (fragapi.pendingOperations.length != 1) {
+		console.error("Expected one pending operation");
+	}
+	var src = fragapi.pendingOperations.pop();
+	console.log("Retrieved shader: " + src + " %o", fragapi._externalShader.split("\n").join().substring(0,150));
+	fragapi.externalShaders.set(src, fragapi._externalShader);
+}
+
+fragapi.getShader = function(gl, source, type) {
+	shader = gl.createShader(type);
 	gl.shaderSource(shader, source);
 	gl.compileShader(shader);
 
 	if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+		console.log(source);
+		console.log(gl.getShaderInfoLog(shader));
 		alert(gl.getShaderInfoLog(shader));
 		return null;
 	}
@@ -132,14 +153,73 @@ FrameBuffer.prototype = {
 		this.gl.uniform3f( this.getUniformLocation(name), v1,v2,v3 );
 	},
 	
+	getFromElement: function(id) {
+		var shaderScript = document.getElementById(id);
+		if (!shaderScript) {
+			return null;
+		}
+
+		var source = "";
+			
+		// 'shaderScript' is a HTMLScriptElement. 	
+		// We must extract the text node.
+		var currentChild = shaderScript.firstChild;
+		while(currentChild) {  
+			if (currentChild.nodeType == currentChild.TEXT_NODE) {  
+				source += currentChild.textContent;  
+			}  
+			currentChild = currentChild.nextSibling;  
+		}  
+		return source;
+	},
+	
+	resolve: function(src, callback) {
+		if (fragapi.externalShaders.has(src)) {
+			console.log("Found " + src + " in cache");
+			return fragapi.externalShaders.get(src);
+		}
+	
+		var text = this.getFromElement(src);
+		if (text != null) {
+			console.log("Resolved " + src + " from element");
+			return text;
+		}
+		
+		if ( fragapi.pendingOperations.length > 0) {
+			return;
+		}
+		
+		var self = this;
+		fragapi.loadScript(src, src, function() { self.initShaders(); } );
+	},
+	
 	// Load and compile.
     initShaders : function() {
-		var vertexShaderSource = fragapi.getShaderFromElement(this.gl, this.vertexShader);
-		var fragmentShaderSource = fragapi.getShaderFromElement(this.gl, this.fragmentShader);
-		console.log(vertexShaderSource);
+		if (fragapi.pendingOperationsCounter>10) {
+				console.log("I/O timed out:  %O", fragapi.pendingOperations);
+				return;
+		}
+			
+		if ((this.vertexShaderSource == null || this.fragmentShaderSource == null) && fragapi.pendingOperations.length == 0) {
+			this.vertexShaderSource = this.resolve(this.vertexShader);
+			this.fragmentShaderSource = this.resolve(this.fragmentShader);
+		}		
+		
+		if (fragapi.pendingOperations.length > 0) {
+			console.log("Pending I/O operations: %O", fragapi.pendingOperations.join());
+			var self = this;
+			
+			fragapi.pendingOperationsCounter++;
+			
+			window.setTimeout(function() { self.initShaders() }, 300);
+			return;
+		}
+		var vertexShaderCompiled = fragapi.getShader(this.gl, this.vertexShaderSource, this.gl.VERTEX_SHADER);
+		var fragmentShaderCompiled = fragapi.getShader(this.gl, this.fragmentShaderSource, this.gl.FRAGMENT_SHADER);
+
 		this.shaderProgram = this.gl.createProgram();
-        this.gl.attachShader(this.shaderProgram, vertexShaderSource);
-        this.gl.attachShader(this.shaderProgram, fragmentShaderSource);
+        this.gl.attachShader(this.shaderProgram, vertexShaderCompiled);
+        this.gl.attachShader(this.shaderProgram, fragmentShaderCompiled);
         this.gl.linkProgram(this.shaderProgram);
 
         if (!this.gl.getProgramParameter(this.shaderProgram, this.gl.LINK_STATUS)) {
@@ -154,6 +234,8 @@ FrameBuffer.prototype = {
 		if (this.gl.getExtension("WEBGL_debug_shaders")) {
 			//console.log(gl.getExtension("WEBGL_debug_shaders").getTranslatedShaderSource(fragmentShaderSource));
 		}
+		
+		this.start();
     },
 
 	// This is a simple quad
@@ -184,7 +266,7 @@ FrameBuffer.prototype = {
 			this.draw = function() {};
 			console.log("Killing");
 		}
-		console.log("Drawing: " + this.counter);
+		console.log("Drawing frame");
 		var gl = this.gl;
 		var w = gl.viewportWidth*0.5;
 		var h = gl.viewportHeight*0.5;
@@ -201,17 +283,24 @@ FrameBuffer.prototype = {
 	
 	getUniformLocation : function(name) {
 		var loc = this.gl.getUniformLocation( this.shaderProgram, name );
-		console.log("loc:" + loc);
 		return loc;
 	},
 	
 	// The main loop. We will only draw when requested to do so.
 	// 'requestAnimationFrame' will only be called when the browser finds it appropriate.
 	animate: function() {
-		this.updateUniforms();
+		if (this.camera) {
+			this.camera.checkKeys();
+			if (this.camera.dirty || this.dirty) {
+				cam.setUniforms(fb);
+				cam.dirty = false;
+				this.dirty = true;
+			}
+		}
+		
 		if (this.dirty) {
+			this.updateUniforms();
 			this.dirty = false;
-			console.log("Draw");
 			this.draw();
 		}
 		
@@ -231,8 +320,7 @@ FrameBuffer.prototype = {
 	
 	renderToCanvas: function(name) {
 		this.gl = fragapi.getGlFromCanvas(name);
-		fb.init();
-		fb.start();
+		this.init();
 	},
 	
 	getWidth: function() {

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>JSONP-ifier</title>
+		<meta charset="utf-8">
+	
+		<style>
+		div {
+			padding: 10px;
+		}
+		
+		body {
+			font-family: arial;
+			font-size: 28px;
+		}
+
+		textarea {
+			white-space: pre;
+			word-wrap: normal;
+			overflow-y: scroll;
+			overflow-x: scroll;
+			font-family: courier;
+			font-size: 21px;
+		}
+		
+		button {
+			font-family: arial;
+			font-size: 28px;
+		}
+
+		</style>
+	</head>
+	<body>
+	<div>
+	Paste your GLSL code into the left text area, and press 'convert'
+	</div>
+	<div>
+	<textarea id="input" rows="20" cols="60">
+precision highp float;
+
+varying vec2 pos;        // camera dependent position, default is (-1,-1) to (1,1)
+varying vec2 canvasPos;  // absolute position, independent of camera
+uniform vec2 resolution; // frame buffer size, in pixels
+uniform float time;      // time since start, in seconds
+
+void main() {
+	gl_FragColor = vec4(cos(pos.x), sin(pos.y), pos.x*pos.y,1.0);
+}
+	</textarea>
+	
+	<textarea id="output" rows="20" cols="60">
+	output will appear here...
+	</textarea>
+	</div>
+	
+	<script>
+		function transform(input) {
+			var splittext = input.split(/\r?\n/);
+			var output = "fragapi._externalShader = \n";
+			for (i = 0; i < splittext.length; i++) {
+				var line = splittext[i];
+				line = line.replace("'", "\\'");
+				output += "'" + line + "\\n'";
+				if (i < splittext.length-1) output += " +\n";
+			}
+			output += ";\nfragapi.injectShader();";
+			return output;
+		}
+	
+		function convert() {
+			var val = document.getElementById("input").value;
+			alert(document.currentScript);
+			var transformed = transform(val);
+			document.getElementById("output").value = transformed;
+		}
+	</script>
+	<div>
+	<button onclick="convert()">convert</button>
+	</div>
+	http://stackoverflow.com/questions/14219947/why-do-shaders-have-to-be-in-html-file-for-webgl-program/14253795#14253795
+	</body>
+</html>

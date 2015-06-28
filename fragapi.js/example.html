@@ -88,18 +88,13 @@
 	<script>
 		var startTime = Date.now();
 		
-		var fb = FrameBuffer.create("shader.frag", "shader.vert");
+		var fb = FrameBuffer.create("frag.js", "vertex.js");
 		var cam = Camera2D.create("canvas");
+		fb.camera = cam;
 		
 		fb.updateUniforms = function() {
-			if (cam.dirty || fb.dirty) {
-				fb.setUniform1f("time", (Date.now() - startTime) / 1000);
-				fb.setUniform1f("zoom", 1.0);
-				cam.setUniforms(fb);
-				console.log("Cam is " + cam.dirty);
-				fb.setDirty();
-				cam.dirty = false;
-			}
+		    fb.setUniform1f("time", (Date.now() - startTime) / 1000);
+			//fb.setDirty();
 		};
 		
 		fb.renderToCanvas("canvas");	

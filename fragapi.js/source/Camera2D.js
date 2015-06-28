@@ -69,7 +69,7 @@ Camera2D.prototype = {
 		this.dirty = this.dirty || this.dragging; 
 	},
 	
-	toggleStatus: function(keyCode, value) {
+	toggleStatus: function(keyCode, value, ev) {
 		switch( keyCode ) {
 			case 38: this.keyUp = value; break;
 			case 40: this.keyDown = value; break;
@@ -77,7 +77,11 @@ Camera2D.prototype = {
 			case 39: this.keyRight = value; break;						
 			case 87: this.keyW = value; break;
 			case 83: this.keyS = value; break;
+			default: return;
 		}
+		if (ev.preventDefault) ev.preventDefault();
+		ev.returnValue = false;
+		
 	},
 	
 	doZoom: function(factor) {
@@ -106,7 +110,6 @@ Camera2D.prototype = {
 			cy = (this.centerY+(this.mouseY-this.mouseDownY)*this.zoom*this.dragFactor)/h;
 		}
 		frameBuffer.setUniform2f('center', cx, cy);
-		console.log("Zoom " + this.zoom + " center: " + cx + " " + cy + " dragging: "+ this.dragging);
 		frameBuffer.setUniform1f('zoom', this.zoom);
 	},
 	
@@ -121,8 +124,8 @@ Camera2D.prototype = {
 		canvas.addEventListener('mousewheel', function(e) { self.mouseWheel(e) }, false);
 		canvas.addEventListener('DOMMouseScroll', function(e) { self.mouseWheel(e) }, false);
 		
-		document.addEventListener('keydown', function ( event ) { self.toggleStatus(event.keyCode, true);}, false );
-		document.addEventListener('keyup',   function ( event ) { self.toggleStatus(event.keyCode, false);}, false );
+		document.addEventListener('keydown', function ( event ) { self.toggleStatus(event.keyCode, true, event);}, false );
+		document.addEventListener('keyup',   function ( event ) { self.toggleStatus(event.keyCode, false, event);}, false );
 	}
 	
 }
