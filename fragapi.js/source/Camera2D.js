@@ -32,8 +32,10 @@ Camera2D.prototype = {
 	constructor: Camera2D,
 
 	mouseDown: function(e) {
-		this.mouseDownX = e.clientX;
-		this.mouseDownY = e.clientY;
+		var rect = canvas.getBoundingClientRect();
+        
+		this.mouseDownX = e.clientX - rect.left;
+		this.mouseDownY = e.clientY - rect.top;
 		this.dragging = true;
 		this.dirty = true;
 	},
