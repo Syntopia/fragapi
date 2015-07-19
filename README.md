@@ -1,2 +1,4 @@
-# fragapi
-A JavaScript (and Java) library for easy creation of WebGL/OpenGL fragment buffers
+# fragapi.js
+A JavaScript library for easy creation of WebGL/OpenGL pixel graphics.
+
+See http://syntopia.github.io/fragapi/ for more info

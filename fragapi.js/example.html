@@ -5,7 +5,6 @@
 		<meta charset="utf-8">
 	</head>
 	<body>
-		
 	<canvas id="canvas" style="border: none;" width="600" height="600"></canvas>
 
 	<script id="shader.frag" type="x-shader/x-fragment">
@@ -88,13 +87,11 @@
 	<script>
 		var startTime = Date.now();
 		
-		var fb = FrameBuffer.create("frag.js", "vertex.js");
-		var cam = Camera2D.create("canvas");
-		fb.camera = cam;
+		var fb = FrameBuffer.create("data/mandelbrot.js", "data/vertex.js");
+		fb.camera = Camera2D.create("canvas");
 		
 		fb.updateUniforms = function() {
 		    fb.setUniform1f("time", (Date.now() - startTime) / 1000);
-			//fb.setDirty();
 		};
 		
 		fb.renderToCanvas("canvas");	
