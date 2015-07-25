@@ -87,14 +87,16 @@
 	<script>
 		var startTime = Date.now();
 		
-		var fb = FrameBuffer.create("data/mandelbrot.js", "data/vertex.js");
-		fb.camera = Camera2D.create("canvas");
+		//var fb = FrameBuffer.create("data/mandelbrot.js", "data/vertex.js");
+		//fb.camera = Camera2D.create("canvas");
+		//fb.updateUniforms = function() {
+		//   fb.setUniform1f("time", (Date.now() - startTime) / 1000);
+		//};
 		
-		fb.updateUniforms = function() {
-		    fb.setUniform1f("time", (Date.now() - startTime) / 1000);
-		};
-		
+		var fb = FrameBuffer.create2D("examples/mandelbrot.fragp");
 		fb.renderToCanvas("canvas");	
+		fb.camera.setCenter(-450,0);
+		fb.camera.setZoom(1.5);
 	</script>
 	</body>
 </html>

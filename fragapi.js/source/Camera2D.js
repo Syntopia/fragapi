@@ -1,5 +1,5 @@
 
-Camera2D = function() {
+var Camera2D = function() {
 	this.mouseDownX = 0;
 	this.mouseX = 0;
 	this.mouseDownY = 0;
@@ -7,7 +7,7 @@ Camera2D = function() {
 	this.centerX = 0;
 	this.centerY = 0;
 	
-	this.zoomFactor = 2.0;
+	this.zoomFactor = 1.5;
 	this.zoom = 1.0;
 	this.dragFactor = 2.0;
 	
@@ -19,20 +19,27 @@ Camera2D = function() {
 	this.keyRight = false;
 	this.keyW = false;
 	this.keyS = false;
-}
-
-Camera2D.create = function(canvasID) {
-	var cam = new Camera2D();
-	cam.addListeners(canvasID);
-	return cam;
-}
+};
 
 Camera2D.prototype = {
 
 	constructor: Camera2D,
 
+	init: function(canvasID) {
+		this.addListeners(canvasID);
+	},
+	
+	setCenter: function(x,y) {
+		this.centerX = x;
+		this.centerY = y;
+	},
+	
+	setZoom: function(z) {
+		this.zoom = z;
+	},
+	
 	mouseDown: function(e) {
-		var rect = canvas.getBoundingClientRect();
+		var rect = this.canvas.getBoundingClientRect();
         
 		this.mouseDownX = e.clientX - rect.left;
 		this.mouseDownY = e.clientY - rect.top;
@@ -49,7 +56,7 @@ Camera2D.prototype = {
 		this.dirty = true;
 	},
 	
-	mouseUp: function(e) {
+	mouseUp: function() {
 		this.stopDragging();
 	},
 	
@@ -66,12 +73,12 @@ Camera2D.prototype = {
 	},
 	
 	mouseMove: function(e) {
-		var rect = canvas.getBoundingClientRect();
+		var rect = this.canvas.getBoundingClientRect();
         
 		this.mouseX = e.clientX - rect.left;
 		this.mouseY = e.clientY - rect.top;
 		this.dirty = this.dirty || this.dragging; 
-		console.log("Move: x: " +this.mouseX + " y: " +this.mouseY);
+		console.log("[centerX: " +this.centerX + " centerY: " +this.centerY + " zoom: " + this.zoom +"]");
 	},
 	
 	toggleStatus: function(keyCode, value, ev) {
@@ -89,9 +96,17 @@ Camera2D.prototype = {
 		
 	},
 	
+	getViewWidth: function() {
+		return this.canvas.getBoundingClientRect().width;
+	},
+	
+	getViewHeight: function() {
+		return this.canvas.getBoundingClientRect().height;
+	},
+	
 	doZoom: function(factor) {
-		dx = this.mouseX-300;
-		dy = 300-this.mouseY;
+		var dx = this.mouseX-this.getViewWidth()/2;
+		var dy = this.getViewHeight()/2-this.mouseY;
 		this.centerX += dx*2*this.zoom*(1-factor);
 		this.centerY += dy*2*this.zoom*(1-factor);
 		this.zoom *= factor;
@@ -126,15 +141,27 @@ Camera2D.prototype = {
 		this.canvas = document.getElementById(canvasID);
 		
 		var self = this;
-		this.canvas.addEventListener('mousedown', function(e) { self.mouseDown(e) }, false);
-		this.canvas.addEventListener('mouseup', function(e) { self.mouseUp(e) }, false);
-		this.canvas.addEventListener('mouseout', function(e) { self.mouseUp(e) }, false); // check if dragging outside window.
-		this.canvas.addEventListener('mousemove', function(e) { self.mouseMove(e) }, false); 
-		this.canvas.addEventListener('mousewheel', function(e) { self.mouseWheel(e) }, false);
-		this.canvas.addEventListener('DOMMouseScroll', function(e) { self.mouseWheel(e) }, false);
+		this.canvas.addEventListener('mousedown', function(e) { self.mouseDown(e); }, false);
+		this.canvas.addEventListener('mouseup', function(e) { self.mouseUp(e); }, false);
+		this.canvas.addEventListener('mouseout', function(e) { self.mouseUp(e); }, false); // check if dragging outside window.
+		this.canvas.addEventListener('mousemove', function(e) { self.mouseMove(e); }, false); 
+		this.canvas.addEventListener('mousewheel', function(e) { self.mouseWheel(e); }, false);
+		this.canvas.addEventListener('DOMMouseScroll', function(e) { self.mouseWheel(e); }, false);
 		
 		document.addEventListener('keydown', function ( event ) { self.toggleStatus(event.keyCode, true, event);}, false );
 		document.addEventListener('keyup',   function ( event ) { self.toggleStatus(event.keyCode, false, event);}, false );
 	}
-	
-}
+};
+
+Camera2D.vertexShader = 
+'attribute vec3 position;\n' +
+'varying vec2 pos;\n' +
+'varying vec2 canvasPos;\n' +
+'uniform float zoom;\n' +
+'uniform vec2 center;\n' +
+'\n' +
+'void main() {\n' +
+'	pos = position.xy * zoom + center;\n' +
+'	canvasPos = position.xy;\n' +
+'	gl_Position =  vec4(position, 1.0);\n' +
+'}\n';
