@@ -33,21 +33,22 @@
     <section id="main_content" class="inner">
 
    	
-	<script src="releases/fragapi-dev.js"></script>
+	<script src="dist/fragapi-dev.min.js"></script>
 	
-	<p>As of now, very much work-in-progress. One simple example: the following code</p>
-<pre>var fb = FrameBuffer.create("data/mandelbrot.js", "data/vertex.js");
-fb.camera = Camera2D.create("canvas");
-fb.renderToCanvas("canvas");
+	<p>As of now, very much work-in-progress.</p>
+<p>One simple example: the following code</p>
+<pre>FrameBuffer.create2D("examples/mandelbrot.fragp")
+           .renderToCanvas("canvas");
 </pre>
 	
 	<p>does this:</p>
 	
 	 <canvas id="canvas" style="border: none;" width="650" height="650"></canvas>
 	<script>
-		var fb = FrameBuffer.create("data/mandelbrot.js", "data/vertex.js");
-		fb.camera = Camera2D.create("canvas");
+		var fb = FrameBuffer.create2D("examples/mandelbrot.fragp");
 		fb.renderToCanvas("canvas");	
+		fb.camera.setCenter(-450,0);
+		fb.camera.setZoom(1.5);	
 	</script>
 
   </body>

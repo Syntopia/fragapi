@@ -1,0 +1,39 @@
+
+var fb = FrameBuffer.create("data/mandelbrot.js", "data/vertex.js");
+fb.camera = Camera2D.create("canvas");
+fb.renderToCanvas("canvas");
+
+should be:
+
+FrameBuffer.create2D("examples/mandelbrot.fragp")
+           .renderToCanvas("canvas");
+
+		   
+.plan:
+
++ Finalize syntax above
++ Fix hardcoded camera resolution (600x600)
+- Touch support
+- Build process (automate build process using gulp) http://gulpjs.com/
+  - Structure:
+  -    http://syntopia.github.io/fragapi/release/fragapi-dev.js
+  -    http://syntopia.github.io/fragapi/release/fragapi-dev-min.js
+  -    http://syntopia.github.io/fragapi/release/fragapi-0.0.1.js
+  -    http://syntopia.github.io/fragapi/release/fragapi-0.0.1.min.js
+  - Embed standard vertex shaders
+- Finalize fragp syntax and publish the page
+- Make Camera3D
+
+* version 0.0.1
+
+- Better handling of GLSL errors
+- Nested include (reuse)
+- Aspect issues / shadertoy coordinate system?
+
+* version 0.0.2
+ 
+Textures
+Chained buffers
+Flipflop buffers
+
+
